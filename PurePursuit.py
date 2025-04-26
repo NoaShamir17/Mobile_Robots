@@ -21,6 +21,7 @@ class PurePursuit_Controller(object):
         self.MIN_SPEED = MIN_SPEED
         self.MAX_STEER = MAX_STEER
         self.MAX_DSTEER = MAX_DSTEER
+        self.prevTargetInd = 0
 
     def pure_pursuit_steer_control(self, state: State, trajectory: Trajectory,  dt):
         '''
@@ -31,9 +32,9 @@ class PurePursuit_Controller(object):
         Return the target index, look ahead distance, and closest index of path coords
         '''
         target_ind, Lf, closest_index = self.search_target_index(state)
-        alpha = np.arctan2(self.cy[target_ind] - state.rear_y, self.cx[target_ind] - state.rear_x) + state.yaw
+        alpha = np.arctan2(self.cy[target_ind] - state.rear_y, self.cx[target_ind] - state.rear_x) - state.yaw
         delta = np.arctan(2.0 * self.WB * np.sin(alpha) / Lf)
-        print(f"target_ind: {target_ind}, Lf: {Lf}, closest_index: {closest_index}, alpha: {alpha}, delta: {delta}")
+        print(f"target_ind: {target_ind}, Lf: {Lf}, closest_index: {closest_index}, alpha: {alpha}, yaw: {state.yaw} delta: {delta}")
         # ind, Lf, closest_index = self.search_target_index(state)
         return delta, target_ind, closest_index
     
@@ -61,7 +62,7 @@ class PurePursuit_Controller(object):
         
         for ind in range(len(self.cx)):
             d = self.calc_distance(state.rear_x, state.rear_y, self.cx[ind], self.cy[ind])
-            if d <= self.Lfc and d > Lf and ind > closest_index:
+            if d <= self.Lfc and d > Lf and ind > closest_index and ind > self.prevTargetInd:
                 Lf = d
                 target_ind = ind
             
@@ -71,6 +72,7 @@ class PurePursuit_Controller(object):
         if target_ind == -1 or closest_index == -1:
             print("target index or closest index not found", target_ind, closest_index)
            # raise ValueError("target index or closest index not found", target_ind, closest_index)
+        self.prevTargetInd = target_ind
         return target_ind, Lf, closest_index
     
     def calc_distance(self, rear_x, rear_y, point_x, point_y):
@@ -94,11 +96,11 @@ def plot_error(closest_path_coords, states:States, trajectory:Trajectory):
 def main():
     #  hyper-parameters
     k = 0.1  # look forward gain
-    Lfc = 0.3  # [m] look-ahead distance
+    Lfc = 1  # [m] look-ahead distance
     Kp = 1.0  # speed proportional gain
     dt = 0.1  # [s] time tick
     target_speed = 1.0  # [m/s]
-    T = 15.0  # max simulation time
+    T = 100.0  # max simulation time
     WB = car_consts.wheelbase 
     MAX_STEER = car_consts.max_steering_angle_rad  # maximum steering angle [rad]
     MAX_DSTEER = car_consts.max_dt_steering_angle  # maximum steering speed [rad/s]
