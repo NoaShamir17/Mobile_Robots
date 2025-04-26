@@ -30,17 +30,15 @@ class PurePursuit_Controller(object):
         dt
         Return the target index, look ahead distance, and closest index of path coords
         '''
-        # TODO
+        target_ind, Lf, closest_index = self.search_target_index(state)
+        alpha = np.arctan2(self.cy[target_ind] - state.rear_y, self.cx[target_ind] - state.rear_x) + state.yaw
+        delta = np.arctan(2.0 * self.WB * np.sin(alpha) / Lf)
+        print(f"target_ind: {target_ind}, Lf: {Lf}, closest_index: {closest_index}, alpha: {alpha}, delta: {delta}")
         # ind, Lf, closest_index = self.search_target_index(state)
-        # return delta, ind, closest_index
+        return delta, target_ind, closest_index
     
     def proportional_control_acceleration(self, target_speed, current_speed, dt=0.1):
-        '''
-        returns updated linear speed
-        '''
-        # TODO
-        pass
-        # return linear_velocity
+        return self.Kp*(target_speed - current_speed)*dt + current_speed
         
 
     def search_target_index(self, state: State):
@@ -51,16 +49,32 @@ class PurePursuit_Controller(object):
         updated look-ahead distance,
         index of closest coords on trajectory 
         '''
-        # TODO
-        pass
-        # return ind, Lf, self.old_nearest_point_index
+        Lf=0.0
+        min_dist = float('inf')
+        closest_index = -1
+        target_ind = -1
+        for ind in range(len(self.cx)):
+            d = self.calc_distance(state.rear_x, state.rear_y, self.cx[ind], self.cy[ind])
+            if d < min_dist:
+                min_dist = d
+                closest_index = ind
+        
+        for ind in range(len(self.cx)):
+            d = self.calc_distance(state.rear_x, state.rear_y, self.cx[ind], self.cy[ind])
+            if d <= self.Lfc and d > Lf and ind > closest_index:
+                Lf = d
+                target_ind = ind
+            
+        if target_ind == -1:
+            target_ind = closest_index
+            Lf = min_dist
+        if target_ind == -1 or closest_index == -1:
+            print("target index or closest index not found", target_ind, closest_index)
+           # raise ValueError("target index or closest index not found", target_ind, closest_index)
+        return target_ind, Lf, closest_index
     
     def calc_distance(self, rear_x, rear_y, point_x, point_y):
-        '''
-        calculates the distance between two coords
-        '''
-        # TODO
-        pass
+        return ((rear_x - point_x)**2 + (rear_y - point_y)**2)**0.5
 
 
 def plot_error(closest_path_coords, states:States, trajectory:Trajectory):
@@ -80,11 +94,11 @@ def plot_error(closest_path_coords, states:States, trajectory:Trajectory):
 def main():
     #  hyper-parameters
     k = 0.1  # look forward gain
-    Lfc = 1.0  # [m] look-ahead distance
+    Lfc = 0.3  # [m] look-ahead distance
     Kp = 1.0  # speed proportional gain
     dt = 0.1  # [s] time tick
     target_speed = 1.0  # [m/s]
-    T = 100.0  # max simulation time
+    T = 15.0  # max simulation time
     WB = car_consts.wheelbase 
     MAX_STEER = car_consts.max_steering_angle_rad  # maximum steering angle [rad]
     MAX_DSTEER = car_consts.max_dt_steering_angle  # maximum steering speed [rad/s]

@@ -19,7 +19,7 @@ class PID(object):
         error = ref - current
         self.current_time = clock
         self.integral += error * dt
-        steering_command = self.kp * error + self.ki * self.integral - self.kd * (error - self.last_error) / dt
+        steering_command = self.kp * error + self.ki * self.integral + self.kd * (error - self.last_error) / dt
         self.last_error = error
         
         return steering_command
@@ -58,10 +58,10 @@ def plot_error(errors, times):
 
 
 def main():
-    pid = PID(current_time=0, kp=0.7, kd=0.08, ki=0.8)
-    STEERING_ERROR_PRECENTAGE = 0.3
+    pid = PID(current_time=0, kp=0.3, kd=0.2, ki=0.0)
+    STEERING_ERROR_PRECENTAGE = 0.0
     STEERING_ERROR_CONST = 0.0
-    LOCALIZATION_ERROR_METER = 0.5
+    LOCALIZATION_ERROR_METER = 0.0
 
     # ----- Do not change the code below ----------------
     dt = 0.1  # [s] time tick
