@@ -7,13 +7,22 @@ import numpy as np
 
 class PID(object):
     def __init__(self, current_time, kp, ki, kd):
-        # TODO
-        pass
+        self.kp = kp
+        self.ki = ki
+        self.kd = kd
+        self.current_time = current_time
+        self.last_error = 0.0
+        self.integral = 0.0
     
     def pid_step(self, ref, current, clock):
-        # TODO
-        pass
-        # return steering_command
+        dt = clock - self.current_time
+        error = ref - current
+        self.current_time = clock
+        self.integral += error * dt
+        steering_command = self.kp * error + self.ki * self.integral + self.kd * (error - self.last_error) / dt
+        self.last_error = error
+        
+        return steering_command
 
 
 class WALL_FOLLOWING(object):
@@ -49,10 +58,10 @@ def plot_error(errors, times):
 
 
 def main():
-    pid = PID(current_time=0, kp=0.0, kd=0.0, ki=0.0)
-    STEERING_ERROR_PRECENTAGE = 0.0
+    pid = PID(current_time=0, kp=1.0, kd=0.0, ki=0.0)
+    STEERING_ERROR_PRECENTAGE = 0.3
     STEERING_ERROR_CONST = 0.0
-    LOCALIZATION_ERROR_METER = 0.0
+    LOCALIZATION_ERROR_METER = 0.5
 
     # ----- Do not change the code below ----------------
     dt = 0.1  # [s] time tick
