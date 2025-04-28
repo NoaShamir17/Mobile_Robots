@@ -34,7 +34,6 @@ class PurePursuit_Controller(object):
         target_ind, Lf, closest_index = self.search_target_index(state)
         alpha = np.arctan2(self.cy[target_ind] - state.rear_y, self.cx[target_ind] - state.rear_x) - state.yaw
         delta = np.arctan(2.0 * self.WB * np.sin(alpha) / Lf)
-        print(f"target_ind: {target_ind}, Lf: {Lf}, closest_index: {closest_index}, alpha: {alpha}, yaw: {state.yaw} delta: {delta}")
         # ind, Lf, closest_index = self.search_target_index(state)
         return delta, target_ind, closest_index
     
@@ -60,11 +59,14 @@ class PurePursuit_Controller(object):
                 min_dist = d
                 closest_index = ind
         
-        for ind in range(len(self.cx)):
+        ind = closest_index
+        while ind < len(self.cx):
             d = self.calc_distance(state.rear_x, state.rear_y, self.cx[ind], self.cy[ind])
-            if d <= self.Lfc and d > Lf and ind > closest_index and ind > self.prevTargetInd:
+            if d >= self.Lfc:
                 Lf = d
                 target_ind = ind
+                break
+            ind += 1
             
         if target_ind == -1:
             target_ind = closest_index
@@ -96,7 +98,7 @@ def plot_error(closest_path_coords, states:States, trajectory:Trajectory):
 def main():
     #  hyper-parameters
     k = 0.1  # look forward gain
-    Lfc = 1  # [m] look-ahead distance
+    Lfc = 0.9  # [m] look-ahead distance
     Kp = 1.0  # speed proportional gain
     dt = 0.1  # [s] time tick
     target_speed = 1.0  # [m/s]

@@ -58,10 +58,10 @@ def plot_error(errors, times):
 
 
 def main():
-    pid = PID(current_time=0, kp=0.3, kd=0.2, ki=0.0)
-    STEERING_ERROR_PRECENTAGE = 0.0
+    pid = PID(current_time=0, kp=0.8, kd=0, ki=1.5)
+    STEERING_ERROR_PRECENTAGE = 0.3
     STEERING_ERROR_CONST = 0.0
-    LOCALIZATION_ERROR_METER = 0.0
+    LOCALIZATION_ERROR_METER = 0.5
 
     # ----- Do not change the code below ----------------
     dt = 0.1  # [s] time tick
