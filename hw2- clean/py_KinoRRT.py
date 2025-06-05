@@ -39,13 +39,13 @@ class KINORRT(object):
             if self.local_planner(edge):
                 # TODO
                 if self.tree.isConfExists(x_new):
-                    #can implement path improvement here
-                    continue
-                eid = self.tree.AddVertex(x_new)
+                    eid = self.tree.getIndexForState(x_new)
+                else:
+                    eid = self.tree.AddVertex(x_new)
                 self.tree.vertices[eid].set_waypoints(edge)
                 self.tree.AddEdge(x_near_idx, eid, edge_cost)
 
-                #end condition, not necessarily here, could be after max iterations, and path improvement should be added
+                #end condition, not necessarily here, could be after max iterations
                 if np.linalg.norm(np.array(x_new[:2]) - np.array(goal[:2])) < self.max_step_size and abs(np.rad2deg(x_new[2] - goal[2]) % 360) < 15:
                     path, path_idx, cost = self.get_shortest_path(eid)
                     print(f'found path with cost: {cost}')
