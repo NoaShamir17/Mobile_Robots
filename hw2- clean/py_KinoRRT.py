@@ -38,7 +38,18 @@ class KINORRT(object):
             # add vertex and edge
             if self.local_planner(edge):
                 # TODO
-                pass
+                if self.tree.isConfExists(x_new):
+                    #can implement path improvement here
+                    continue
+                eid = self.tree.AddVertex(x_new)
+                self.tree.vertices[eid].set_waypoints(edge)
+                self.tree.AddEdge(x_near_idx, eid, edge_cost)
+
+                #end condition, not necessarily here, could be after max iterations, and path improvement should be added
+                if np.linalg.norm(np.array(x_new[:2]) - np.array(goal[:2])) < self.max_step_size and abs(np.rad2deg(x_new[2] - goal[2]) % 360) < 15:
+                    path, path_idx, cost = self.get_shortest_path(eid)
+                    print(f'found path with cost: {cost}')
+                    return path, path_idx, cost
 
             itr += 1
             if itr%1000 ==0:
@@ -47,19 +58,22 @@ class KINORRT(object):
     
     def sample(self, goal):
         # TODO
-        # return x, y
-        pass
+        return goal if np.random.rand() < self.p_bias else np.random.uniform(0, 1, 2) * np.array([self.env_cols, self.env_rows])  # sample random point in the map
 
     
     def is_in_collision(self, x_new):
         # TODO
-        pass
+        if self.map[int(x_new[1]), int(x_new[0])] != 0: #maybe switch x and y
+            return True
         
 
     
     def local_planner(self, edge):
         #TODO
-        pass
+        for x in edge:
+            if self.is_in_collision(x):
+                return False
+        return True
     
     def get_shortest_path(self, goal_idx):
         '''
@@ -68,8 +82,14 @@ class KINORRT(object):
         return the shortest path and the cost
         '''
         # TODO
-        pass
-        # return path, path_idx , cost
+        path = [self.tree.vertices[goal_idx].conf]
+        path_idx = [goal_idx]
+        cost = self.tree.vertices[goal_idx].cost
+        while goal_idx != self.tree.GetRootID():
+            goal_idx = self.tree.edges[goal_idx]
+            path_idx.append(goal_idx)
+            path.append(self.tree.vertices[goal_idx].conf)
+        return path, path_idx , cost
     
     
 
@@ -135,8 +155,10 @@ class Odom(object):
     
     def sample_control_command(self):
         # TODO
-        # return delta_time, steering, velocity
-        pass
+        delta_time = np.random.uniform(self.min_time, self.max_time)
+        steering = np.random.uniform(-self.max_steering_angle, self.max_steering_angle)
+        velocity = np.random.uniform(self.min_velocity, self.max_velocity)
+        return delta_time, steering, velocity
 
     def propagate(self,  steering, velocity ,delta_time, initial_x):
         initial_x = self.converter.pixel2meter(initial_x)
@@ -163,7 +185,7 @@ class Odom(object):
 
 
 def main():
-    map_original = np.array(np.load('maze_test.npy'), dtype=int)
+    map_original = np.array(np.load(r'C:\Users\yahli\Documents\Mobile_Robots\hw2- clean\maze_test.npy'), dtype=int)
     resolution=0.05000000074505806
     inflated_map = inflate(map_original, 0.2/resolution)
     converter = CSpace(resolution, origin_x=-4.73, origin_y=-5.66, map_shape=map_original.shape)
