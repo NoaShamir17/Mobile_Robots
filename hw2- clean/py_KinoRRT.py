@@ -42,7 +42,6 @@ class KINORRT(object):
                 if self.tree.isConfExists(x_new):
                     idx = self.tree.getIndexForState(x_new)
                     if self.tree.vertices[x_near_idx].cost + edge_cost < self.tree.vertices[idx].cost:
-                        print(f'found better path to {x_new}')
                         eid = idx
                 if eid == -1:
                     eid = self.tree.AddVertex(x_new)
@@ -197,11 +196,19 @@ def main():
     goal = converter.meter2pixel([6.22, -4.22])
     print(start)
     print(goal)
-    kinorrt_planner = KINORRT(env_map=inflated_map, max_step_size=20, max_itr=10000, p_bias=0.05,converter=converter )
-    path, path_idx, cost = kinorrt_planner.find_path(start, goal)
+    target_cost = 39.5
+    cost = float('inf')
+    while cost > target_cost:
+        kinorrt_planner = KINORRT(env_map=inflated_map, max_step_size=20, max_itr=10000, p_bias=0.05,converter=converter )
+        print(f'cost: {cost}, retrying...')
+        path, path_idx, cost = kinorrt_planner.find_path(start, goal)
+        if cost is None:
+            cost = float('inf')
     print(f'cost: {cost}')
     plotter = Plotter(inflated_map=inflated_map)
     plotter.draw_tree(kinorrt_planner.tree, start, goal, path, path_idx)
+    path_meters = converter.pathindex2pathmeter(path)
+    np.save('path_meters.npy', path_meters)
     
 
 

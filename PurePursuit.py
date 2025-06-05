@@ -110,7 +110,9 @@ def main():
     MIN_SPEED = car_consts.min_linear_velocity  # minimum speed [m/s]
     MAX_ACCEL = 1.0  # maximum accel [m/ss]
 
-    path = np.load('path_maze_meter_sim.npy')
+    path = np.load('path_meters.npy')
+    # Reverse the path by flipping the order of points
+    path = path[::-1]
     trajectory = Trajectory(dl=0.1, path =path, TARGET_SPEED=target_speed)
     state = State(x=trajectory.cx[0], y=trajectory.cy[0], yaw=trajectory.cyaw[0], v=0.0)
     lastIndex = len(trajectory.cx) - 1
