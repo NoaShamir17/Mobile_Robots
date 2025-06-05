@@ -489,7 +489,7 @@ class Tree(object):
         @param conf configuration to check if exists.
         '''
         #valid_idxs = [v_idx for v_idx, v in self.vertices.items() if (v.conf[:2] == conf[:2]).all()]
-        valid_idxs = [v_idx for v_idx, v in self.vertices.items() if (v.conf[:2] == conf[:2])]
+        valid_idxs = [v_idx for v_idx, v in self.vertices.items() if (v.conf[:2] == conf[:2]) and abs(v.conf[2] - conf[2]) < 0.01]
         if len(valid_idxs) > 1:
             print('multiple goals')
         if len(valid_idxs) > 0:
