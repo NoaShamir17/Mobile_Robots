@@ -17,53 +17,108 @@ class PRM(object):
     def build_prm_graph(self):
         # sampling
         self.graph = {}
-        # TODO
+        self.vertices = []
+        attempts = 0
+        while len(self.vertices) < self.max_itr and attempts < self.max_itr * 10:
+            sample = self.sample()
+            if not self.is_in_collision(sample):
+                self.vertices.append(sample)
+                self.graph[sample] = []
+            attempts += 1
         # wiring neighbors
-        # TODO
-        
+        for v in self.vertices:
+            neighbors = self.find_neighbors_in_range(v)
+            for nei, dist in neighbors:
+                if self.local_planner(v, nei, dist):
+                    self.graph[v].append((nei, dist))
 
-    def find_neighbors_in_range(self, vertex1):
-        distances = [] # tuples of [(nei, dist)]
-        pass
-        # TODO
-        return distances # tuples of [(nei, dist)]
-    
-    def get_cost(self, vertex1, vertex2):
-        pass
-    
     def sample(self):
-        pass # cols~x, rows~y, 
-    
+        x = np.random.randint(0, self.env_cols)
+        y = np.random.randint(0, self.env_rows)
+        return (int(x), int(y))  # Always return a tuple of ints
 
     def is_in_collision(self, config):
-        pass
+        x, y = config
+        if x < 0 or x >= self.env_cols or y < 0 or y >= self.env_rows:
+            return True
+        return self.map[y, x] != 0
 
-    
+    def find_neighbors_in_range(self, vertex1):
+        distances = []
+        for v in self.vertices:
+            if v == vertex1:
+                continue
+            dist = np.linalg.norm(np.array(vertex1) - np.array(v))
+            if dist <= self.max_dist:
+                distances.append((v, dist))
+        return distances
+
     def local_planner(self, config1, config2, dist):
-        pass
+        # Simple straight-line check
+        num_steps = int(dist) #*100
+        x1, y1 = config1
+        x2, y2 = config2
+        for i in range(1, num_steps):
+            t = i / num_steps
+            x = int(x1 + t * (x2 - x1))
+            y = int(y1 + t * (y2 - y1))
+            if self.is_in_collision((x, y)):
+                return False
+        return True
 
 class A_Star():
     def __init__(self, prm: PRM):
         self.prm = prm
 
     def h(self, current, goal):
-        pass
+        return np.linalg.norm(np.array(current) - np.array(goal))
 
 
     def find_path(self, start, goal):
-        start = (start[0], start[1])
-        goal = (goal[0], goal[1])
-        self.prm.graph[start] = self.prm.find_neighbors_in_range(start)
-        for nei, dist in self.prm.graph[start]:
-            self.prm.graph[nei].append((start, dist))
-        self.prm.graph[goal] = self.prm.find_neighbors_in_range(goal)
-        #TODO
+        # Add start and goal to the graph if not present
+        if start not in self.prm.graph:
+            self.prm.graph[start] = []
+            for nei, dist in self.prm.find_neighbors_in_range(start):
+                if self.prm.local_planner(start, nei, dist):
+                    self.prm.graph[start].append((nei, dist))
+                    self.prm.graph[nei].append((start, dist))
+        if goal not in self.prm.graph:
+            self.prm.graph[goal] = []
+            for nei, dist in self.prm.find_neighbors_in_range(goal):
+                if self.prm.local_planner(goal, nei, dist):
+                    self.prm.graph[goal].append((nei, dist))
+                    self.prm.graph[nei].append((goal, dist))
+        
+        open_set = []
+        heapq.heappush(open_set, (0 + self.h(start, goal), 0, start))
+        came_from = {}
+        g_score = {start: 0}
+        closed_set = set()
 
+        while open_set:
+            _, curr_g, current = heapq.heappop(open_set)
+            if current == goal:
+                path = self.reconstruct_path(current, came_from, start)
+                return path, g_score[goal]
+            closed_set.add(current)
+            for neighbor, cost in self.prm.graph.get(current, []):
+                if neighbor in closed_set:
+                    continue
+                tentative_g = g_score[current] + cost
+                if neighbor not in g_score or tentative_g < g_score[neighbor]:
+                    came_from[neighbor] = current
+                    g_score[neighbor] = tentative_g
+                    f_score = tentative_g + self.h(neighbor, goal)
+                    heapq.heappush(open_set, (f_score, tentative_g, neighbor))
+        return None, float('inf')
 
     def reconstruct_path(self, current, came_from, start):
-        path = []
-        # TODO
-        pass
+        path = [current]
+        while current != start:
+            current = came_from[current]
+            path.append(current)
+        path.reverse()
+        return path
 
         
 
@@ -123,13 +178,17 @@ def main():
     inflated_map = inflate(map_original, robot_raduis /resolution)
     prm = PRM(env_map=inflated_map,  max_itr=1000, dist = 30)
     astar = A_Star(prm)
-    start=converter.meter2pixel([0.0,0.0])
-    goal = converter.meter2pixel([-2, 0])
+    start_full = tuple(converter.meter2pixel([0.0,0.0]))
+    goal_full = tuple(converter.meter2pixel([-2, 0]))
+    # Only use (x, y)
+    start = (start_full[0], start_full[1])
+    goal = (goal_full[0], goal_full[1])
     print(start)
     print(goal)
     path, cost = astar.find_path(start, goal)
     print(f'path cost: {cost}, time: {time.time()-start_time}')
     plotter = Plotter(inflated_map)
+    #print('path:',path)
     plotter.draw_graph(prm.graph, start, goal,path)
 
 
