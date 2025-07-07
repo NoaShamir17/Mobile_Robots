@@ -1,4 +1,3 @@
-
 import sys
 import pathlib
 sys.path.append(str(pathlib.Path(__file__).parent.parent.parent))
@@ -73,9 +72,7 @@ def motion_model(x, u):
 
 
 def gauss_likelihood(x, sigma):
-    #TODO
-    pass
-    # return p
+    return (1.0 / (math.sqrt(2.0 * math.pi) * sigma)) * math.exp(- (x ** 2) / (2 * sigma ** 2))
 
 
 def calc_covariance(x_est, px, pw):
@@ -101,23 +98,22 @@ def pf_localization(px, pw, z, u):
         w = pw[0, ip]
 
         #  Predict with random input sampling
-        # hint - use R to add randomness to ud
-        # TODO ud = U + randomness
+        ud = u + np.random.multivariate_normal([0, 0], R).reshape(2, 1)
         x = motion_model(x, ud)
 
         #  Calc Importance Weight
-        # find the difference between predicted_Z and acual Z
         for i in range(len(z[:, 0])):
-            
-            pre_z = # TODO
+            dx = x[0, 0] - z[i, 1]
+            dy = x[1, 0] - z[i, 2]
+            pre_z = math.hypot(dx, dy)
             dz = pre_z - z[i, 0]
-            w = w * gauss_likelihood(dz, math.sqrt(Q[0, 0]))
+            w *= gauss_likelihood(dz, math.sqrt(Q[0, 0]))
 
         px[:, ip] = x[:, 0]
         pw[0, ip] = w
 
     pw = pw / pw.sum()  # normalize
-    # x_est = # TODO
+    x_est = px @ pw.T  # weighted mean
     p_est = calc_covariance(x_est, px, pw)
 
     N_eff = 1.0 / (pw.dot(pw.T))[0, 0]  # Effective particle number
@@ -127,12 +123,21 @@ def pf_localization(px, pw, z, u):
 
 
 def re_sampling(px, pw):
-    """
-    low variance re-sampling
-    """
-    # TODO
-    pass
-    # return px, pw
+    NP = px.shape[1]
+    cumulative_sum = np.cumsum(pw[0])
+    cumulative_sum[-1] = 1.  # avoid round-off error
+    indexes = np.zeros(NP, dtype=int)
+    r = np.random.rand() / NP
+    c = pw[0, 0]
+    i = 0
+    for m in range(NP):
+        U = r + m / NP
+        while U > cumulative_sum[i]:
+            i += 1
+        indexes[m] = i
+    px = px[:, indexes]
+    pw = np.ones((1, NP)) / NP
+    return px, pw
 
 
 def plot_covariance_ellipse(x_est, p_est):  # pragma: no cover
